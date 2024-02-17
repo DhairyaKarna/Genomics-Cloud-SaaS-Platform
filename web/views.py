@@ -111,14 +111,58 @@ def create_annotation_job_request():
     bucket_name = request.args.get("bucket")
     s3_key = request.args.get("key")
 
+    if not bucket_name or not s3_key:
+        return jsonify({"code": 400, "status": "error", "message": "Missing bucket or key parameters"}), 400
+
     # Extract the job ID from the S3 key
-    # Move your code here
+    file_name = s3_key.split('/')[-1]
+    job_id, file_name = file_name.split('~')
+
+    # Current time as epoch for submit_time
+    # https://www.programiz.com/python-programming/time
+    submit_time = int(time.time())
+
+    user_id = session["primary_identity"]
+
+    # Preparing data for DynamoDB
+    data = {
+        'job_id': job_id,
+        'user_id': user_id,
+        "input_file_name": file_name, 
+        "s3_inputs_bucket": bucket_name,
+        "s3_key_input_file": s3_key,
+        "submit_time": submit_time,
+        'job_status': 'PENDING'
+    }
+
 
     # Persist job to database
-    # Move your code here...
+    dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
+    table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+
+    try:
+        # Persist job details to DynamoDB
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/put_item.html
+        table.put_item(Item=data)
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        return jsonify({"code": 500, "status": "error", "message": f"DynamoDB client error: {error_code}"}), 500
+    except Exception as e:
+        return jsonify({"code": 500, "status": "error", "message": f"Error persisting job details to DynamoDB: {e}"}), 500
 
     # Send message to request queue
-    # Move your code here...
+    sns = boto3.client('sns', region_name=app.config["AWS_REGION_NAME"])
+
+    try:
+        # Construct and send the POST request to the annotator
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
+        sns.publish(TopicArn=app.config['AWS_SNS_JOB_REQUEST_TOPIC'], Message = json.dumps(data), Subject = 'Job Submission')
+
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        return jsonify({"code": 500, "status": "error", "message": f"DynamoDB client error: {error_code}"}), 500
+    except BotoCoreError as e:
+        return jsonify({"code": 500, "message": f"Boto core error in generating signed request: {e}"}), 500
 
     return render_template("annotate_confirm.html", job_id=job_id)
 
