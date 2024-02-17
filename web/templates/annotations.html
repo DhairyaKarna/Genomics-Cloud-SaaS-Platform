@@ -27,7 +27,32 @@ University of Chicago
         </div>
 
         <!-- DISPLAY LIST OF ANNOTATION JOBS -->
+        {% if annotations %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Request ID</th>
+                    <th>Request Time</th>
+                    <th>VCF File Name</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in annotations %}
+                <tr>
+                    <td><a href="{{ url_for('annotation_details', job_id=job.job_id) }}">{{ job.job_id }}</a></td>
+                    <td>{{ job.submit_time }}</td>
+                    <td>{{ job.input_file_name }}</td>
+                    <td>{{ job.job_status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No annotations found.</p>
+        {% endif %}
 
     </div> <!-- container -->
+
 
 {% endblock %}

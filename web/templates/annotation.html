@@ -19,6 +19,15 @@ University of Chicago
         </div>
 
         <!-- DISPLAY ANNOTATION JOB DETAILS -->
+        <p>Request/Job ID: {{ job.job_id }}</p>
+        <p>Request Time: {{ job.request_time_formatted }}</p>
+        <p>Input filename: {{ job.input_file_name }}</a></p>
+        <p>Status: {{ job.job_status }}</p>
+        {% if job.job_status == 'COMPLETED' %}
+            <p>Complete Time: {{ job.complete_time_formatted }}</p>
+            <p>Annotated Results File: download</a></p>
+            <p>Annotation Log File: view</a></p>
+        {% endif %}
 
         <hr />
 

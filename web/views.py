@@ -11,7 +11,7 @@ __author__ = "Vas Vasiliadis <vas@uchicago.edu>"
 import uuid
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import boto3
 from botocore.client import Config
@@ -168,24 +168,102 @@ def create_annotation_job_request():
     return render_template("annotate_confirm.html", job_id=job_id)
 
 
+""" Convert epoch time to CST
+"""
+
+def epoch_to_CST(epoch_time):
+    # Convert epoch to datetime in UTC
+    utc_time = datetime.fromtimestamp(int(epoch_time), timezone.utc)
+
+    # Defining the CST offset: UTC-6 hours
+    cst_offset = timedelta(hours=-6)
+
+    # Applying the CST offset to UTC time
+    cst_time = utc_time + cst_offset
+
+    # Formatting the time as needed
+    return cst_time.strftime('%Y-%m-%d %H:%M:%S')
+
 """List all annotations for the user
 """
 
 
 @app.route("/annotations", methods=["GET"])
+@authenticated
 def annotations_list():
 
-    # Get list of annotations to display
+    user_id = session["primary_identity"]
 
-    return render_template("annotations.html", annotations=None)
+    # Query the DynamoDB table using the secondary index
+    dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
+    table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+
+    try:
+        response = table.query(
+            IndexName='user_id_index',  
+            KeyConditionExpression=Key('user_id').eq(user_id)
+        )
+    except ClientError as e:
+        app.logger.error(f"Error querying DynamoDB: {e}")
+        abort(500)  # Internal Server Error
+
+    except Exception as e:
+        # Handle all other possible exceptions
+        app.logger.error(f"Unexpected error: {str(e)}")
+        abort(500)  # Internal Server Error
+
+
+    # Get list of annotations to display
+    jobs = response.get('Items', [])
+
+
+    # Check if there are no jobs
+    if not jobs:
+        message = "No annotations found."
+        return render_template("annotations.html", message=message)
+
+    # Convert epoch to human-readable date-time in CST
+    for job in jobs:
+        
+        # Converting time to CST
+        job['submit_time'] = epoch_to_CST(job['submit_time'])
+
+
+    return render_template("annotations.html", annotations=jobs)
 
 
 """Display details of a specific annotation job
 """
 
 
-@app.route("/annotations/<id>", methods=["GET"])
-def annotation_details(id):
+@app.route("/annotations/<job_id>", methods=["GET"])
+def annotation_details(job_id):
+    user_id = session.get("primary_identity")
+
+    # Query the DynamoDB table for the job details
+    dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
+    table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+
+    try:
+        response = table.get_item(Key={'job_id': job_id})
+        job = response.get('Item', None)
+        
+        # Check if the job exists and belongs to the user
+        if not job or job.get('user_id') != user_id:
+            abort(403)  # Forbidden if job doesn't exist or doesn't belong to the user
+
+        # Convert epoch times to CST
+        job['request_time_formatted'] = epoch_to_CST(job['submit_time'])
+        if 'complete_time' in job and job['job_status'] == 'COMPLETED':
+            job['complete_time_formatted'] = epoch_to_CST(job['complete_time'])
+
+        return render_template("annotation.html", job=job)
+        
+    except ClientError as e:
+        app.logger.error(f"Error fetching job details from DynamoDB: {e}")
+        abort(500)  # Internal Server Error
+
+
     pass
 
 
