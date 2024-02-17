@@ -13,6 +13,8 @@ __author__ = "Vas Vasiliadis <vas@uchicago.edu>"
 import sys
 import time
 import driver
+import os
+import boto3
 
 # Get configuration
 from configparser import ConfigParser, ExtendedInterpolation
@@ -23,6 +25,10 @@ config.read("annotator_config.ini")
 """A rudimentary timer for coarse-grained profiling
 """
 
+# Initializing AWS clients with config
+s3 = boto3.client('s3', region_name=config.get('aws', 'AwsRegionName'))
+dynamodb = boto3.resource('dynamodb', region_name=config.get('aws', 'AwsRegionName'))
+table = dynamodb.Table(config.get('gas', 'AnnotationsTable'))
 
 class Timer(object):
     def __init__(self, verbose=True):

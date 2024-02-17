@@ -67,6 +67,8 @@ def update_dynamodb(job_id):
 
 def handle_requests_queue(sqs=None):
 
+    messages = {}
+
     # Read messages from the queue
     # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/sqs-example-sending-receiving-msgs.html
     try:
@@ -125,7 +127,7 @@ def handle_requests_queue(sqs=None):
             if successful_download:
                 # To Catch errors in subprocess or when deleting message
                 try:
-                    subprocess.Popen(['python', ANN_DIR, file_path, job_id, user_id])
+                    Popen(['python', ANN_DIR, file_path, job_id, user_id])
 
                     update_dynamodb(job_id)
 
