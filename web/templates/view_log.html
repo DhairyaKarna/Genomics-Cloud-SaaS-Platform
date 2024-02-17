@@ -19,6 +19,13 @@ University of Chicago
         </div>
 
         <!-- DISPLAY LOG FILE CONTENTS -->
+        <!--  Jinja Conditional Statement -->
+        <!-- https://python-web.teclado.com/section07/lectures/06_jinja2_conditional_statements/ -->
+        {% if log_content %}
+            <pre>{{ log_content }}</pre>
+        {% else %}
+            <p>No log content found.</p>
+        {% endif %}
 
         <hr />
     

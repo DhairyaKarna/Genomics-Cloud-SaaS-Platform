@@ -26,7 +26,10 @@ University of Chicago
             </a>
         </div>
 
+        <hr />
         <!-- DISPLAY LIST OF ANNOTATION JOBS -->
+        <!--  Jinja Conditional Statement -->
+        <!-- https://python-web.teclado.com/section07/lectures/06_jinja2_conditional_statements/ -->
         {% if annotations %}
         <table class="table">
             <thead>
@@ -40,7 +43,7 @@ University of Chicago
             <tbody>
                 {% for job in annotations %}
                 <tr>
-                    <td><a href="{{ url_for('annotation_details', job_id=job.job_id) }}">{{ job.job_id }}</a></td>
+                    <td><a href="{{ url_for('annotation_details', id=job.job_id) }}">{{ job.job_id }}</a></td>
                     <td>{{ job.submit_time }}</td>
                     <td>{{ job.input_file_name }}</td>
                     <td>{{ job.job_status }}</td>

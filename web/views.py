@@ -172,6 +172,11 @@ def create_annotation_job_request():
 """
 
 def epoch_to_CST(epoch_time):
+    """
+    This methods convrets epoch time in to CST time
+    https://ioflood.com/blog/python-timedelta/#:~:text=Python's%20timedelta%20is%20a%20function,between%20two%20dates%2C%20and%20more.&text=In%20this%20code%2C%20we're,the%20current%20date%20using%20datetime.
+    """
+
     # Convert epoch to datetime in UTC
     utc_time = datetime.fromtimestamp(int(epoch_time), timezone.utc)
 
@@ -194,11 +199,13 @@ def annotations_list():
 
     user_id = session["primary_identity"]
 
-    # Query the DynamoDB table using the secondary index
+    
     dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
     table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
 
     try:
+        # Query the DynamoDB table using the secondary index
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/query.html
         response = table.query(
             IndexName='user_id_index',  
             KeyConditionExpression=Key('user_id').eq(user_id)
@@ -236,15 +243,17 @@ def annotations_list():
 """
 
 
-@app.route("/annotations/<job_id>", methods=["GET"])
-def annotation_details(job_id):
+@app.route("/annotations/<id>", methods=["GET"])
+def annotation_details(id):
     user_id = session.get("primary_identity")
-
-    # Query the DynamoDB table for the job details
+    job_id = id
+    
     dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
     table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
 
     try:
+        # Get job details from the DynamoDB table
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/get_item.html
         response = table.get_item(Key={'job_id': job_id})
         job = response.get('Item', None)
         
@@ -264,17 +273,116 @@ def annotation_details(job_id):
         abort(500)  # Internal Server Error
 
 
-    pass
+"""Download the input vcf file using pre signed url
+"""
+
+
+@app.route('/download_input/<job_id>', methods=["GET"])
+@authenticated
+def download_input(job_id):
+    user_id = session["primary_identity"]
+
+    
+    dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
+    table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+
+    try:
+        # Get input file details from the DynamoDB table
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/get_item.html
+        response = table.get_item(Key={'job_id': job_id})
+        job = response.get('Item', None)
+        
+        # Check if the job exists and belongs to the user
+        if not job or job.get('user_id') != user_id:
+            abort(403)  # Forbidden if job doesn't exist or doesn't belong to the user
+        
+        # Generate the pre-signed URL for the input file
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/generate_presigned_url.html
+        s3_client = boto3.client('s3')
+        presigned_url = s3_client.generate_presigned_url('get_object',
+                                                         Params={'Bucket': job['s3_inputs_bucket'],
+                                                                 'Key': job['s3_key_input_file']},
+                                                         ExpiresIn=3600)
+        return redirect(presigned_url)
+    except ClientError as e:
+        # Log the error and abort
+        app.logger.error(f"Error fetching job details or generating presigned URL: {e}")
+        abort(500)  # Internal Server Error
+
+
+"""Download the result annot.vcf file using presigned url
+"""
+
+
+@app.route('/download_result/<job_id>', methods=["GET"])
+@authenticated
+def download_result(job_id):
+    user_id = session["primary_identity"]
+
+    # Query the DynamoDB table for the job details
+    dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
+    table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+
+    try:
+        # Get results details from the DynamoDB table
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/get_item.html
+        response = table.get_item(Key={'job_id': job_id})
+        job = response.get('Item', None)
+        
+        # Check if the job exists and belongs to the user and is completed
+        if not job or job.get('user_id') != user_id or job.get('job_status') != 'COMPLETED':
+            abort(403)  # Forbidden if job doesn't exist, doesn't belong to the user, or is not completed
+        
+        # Generate the pre-signed URL for the results file
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/generate_presigned_url.html
+        s3_client = boto3.client('s3')
+        presigned_url = s3_client.generate_presigned_url('get_object',
+                                                         Params={'Bucket': job['s3_results_bucket'],
+                                                                 'Key': job['s3_key_result_file']},
+                                                         ExpiresIn=3600)
+        return redirect(presigned_url)
+    except ClientError as e:
+        # Log the error and abort
+        app.logger.error(f"Error fetching job details or generating presigned URL: {e}")
+        abort(500)  # Internal Server Error
 
 
 """Display the log file contents for an annotation job
 """
 
 
-@app.route("/annotations/<id>/log", methods=["GET"])
-def annotation_log(id):
-    pass
+@app.route('/annotations/<id>/log', methods=["GET"])
+@authenticated
+def view_log(id):
+    user_id = session["primary_identity"]
+    job_id = id
+    
+    dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
+    table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
 
+    try:
+        # Get log details from the DynamoDB table
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/get_item.html
+        response = table.get_item(Key={'job_id': job_id})
+        job = response.get('Item', None)
+        
+        # Check if the job exists, belongs to the user and is completed
+        if not job or job.get('user_id') != user_id or job.get('job_status') != 'COMPLETED':
+            abort(403)  # Forbidden if job doesn't exist, doesn't belong to the user, or is not completed
+
+        # Read the log file content from S3
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_object.html
+        s3_client = boto3.client('s3')
+        log_file_object = s3_client.get_object(Bucket=job['s3_results_bucket'],
+                                               Key=job['s3_key_log_file'])
+        log_contents = log_file_object['Body'].read().decode('utf-8')
+
+        return render_template('view_log.html', log_content=log_contents, job_id=job_id)
+        
+    except ClientError as e:
+        # Log the error and abort
+        app.logger.error(f"Error fetching job details or reading log file: {e}")
+        abort(500)  # Internal Server Error
 
 """Subscription management handler
 """

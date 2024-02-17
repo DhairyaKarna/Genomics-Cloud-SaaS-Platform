@@ -19,14 +19,19 @@ University of Chicago
         </div>
 
         <!-- DISPLAY ANNOTATION JOB DETAILS -->
-        <p>Request/Job ID: {{ job.job_id }}</p>
-        <p>Request Time: {{ job.request_time_formatted }}</p>
-        <p>Input filename: {{ job.input_file_name }}</a></p>
-        <p>Status: {{ job.job_status }}</p>
+        <b>Request ID: </b>{{ job.job_id }}<br>
+        <b>Request Time: </b>{{ job.request_time_formatted }}<br>
+        <b>Input filename: </b><a href="{{ url_for('download_input', job_id=job.job_id) }}">{{ job.input_file_name }}</a><br>
+        <b>Status: </b>{{ job.job_status }}<br>
+
+        <!--  Jinja Conditional Statement -->
+        <!-- https://python-web.teclado.com/section07/lectures/06_jinja2_conditional_statements/ -->
         {% if job.job_status == 'COMPLETED' %}
-            <p>Complete Time: {{ job.complete_time_formatted }}</p>
-            <p>Annotated Results File: download</a></p>
-            <p>Annotation Log File: view</a></p>
+            <b>Complete Time: </b>{{ job.complete_time_formatted }}<br>
+
+            <hr />
+            <b>Annotated Results File: </b><a href="{{ url_for('download_result', job_id=job.job_id) }}">download</a><br>
+            <b>Annotation Log File: </b><a href="{{ url_for('view_log', id=job.job_id) }}">view</a><br>
         {% endif %}
 
         <hr />
