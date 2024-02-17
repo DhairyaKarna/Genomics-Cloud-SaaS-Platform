@@ -122,6 +122,7 @@ def create_annotation_job_request():
     # https://www.programiz.com/python-programming/time
     submit_time = int(time.time())
 
+    # Get the user ID from the session
     user_id = session["primary_identity"]
 
     # Preparing data for DynamoDB

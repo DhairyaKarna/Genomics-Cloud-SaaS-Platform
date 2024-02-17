@@ -31,7 +31,7 @@ s3 = boto3.client('s3', region_name=config.get('aws', 'AwsRegionName'))
 dynamodb = boto3.resource('dynamodb', region_name=config.get('aws', 'AwsRegionName'))
 table = dynamodb.Table(config.get('gas', 'AnnotationsTable'))
 
-# Getting the current path to save the data
+# Getting the current path to save the data and run the annotator
 BASE_DIR = os.path.abspath(os.path.dirname(__file__)) + "/"
 ANN_DIR = BASE_DIR + "run.py"
 DATA_DIR = BASE_DIR + "data/" 
