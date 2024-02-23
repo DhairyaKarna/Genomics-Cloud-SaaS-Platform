@@ -45,6 +45,7 @@ if [ "$1" = "console" ]; then
         --manage-script-name \
         --mount /gas=app:app \
         --socket /tmp/gas.sock \
+        --processes 1 \
         --vacuum
 else
     # Start the web server and redirect console output to the log file
