@@ -246,7 +246,9 @@ def annotations_list():
 def annotation_details(id):
     user_id = session.get("primary_identity")
     job_id = id
-    user_role = session.get("role")
+
+    # In case of new user who just registered, the role field is not populated, To handle that the default value for role is free_user
+    user_role = session.get("role", "free_user")
     
     dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
     table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
