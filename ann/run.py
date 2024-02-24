@@ -111,7 +111,7 @@ def update_dynamodb(job_id, s3_results_bucket, s3_key_result_file, s3_key_log_fi
         print(f"Unexpected error when updating DynamoDB: {str(e)}")
 
 
-def start_sfn(job_id, user_id, results_s3_key):
+def start_sfn(job_id, user_id, results_s3_key, s3_bucket_name):
 
     user = helpers.get_user_profile(user_id)
     role = user['role']
@@ -120,6 +120,7 @@ def start_sfn(job_id, user_id, results_s3_key):
         input_data = {
         "job_id" : job_id,
         "user_id" : user_id,
+        "s3_bucket_name" : s3_bucket_name,
         "results_s3_key" : results_s3_key
         }
 
@@ -141,7 +142,7 @@ def start_sfn(job_id, user_id, results_s3_key):
             else:
                 print(f"A client error occurred: {e}")
         except Exception as e:
-            print(f"Unexpected error when updating DynamoDB: {str(e)}")
+            print(f"Unexpected error when starting Step Functions: {str(e)}")
 
 
 def delete_local_file(file_path):
@@ -193,7 +194,7 @@ def main():
     update_dynamodb(job_id, s3_bucket_name, results_s3_key, log_s3_key)
 
     # Start the step function for archival process if user is FREE
-    start_sfn(job_id, user_id, results_s3_key)
+    start_sfn(job_id, user_id, results_s3_key, s3_bucket_name)
 
     # Clean up local job files
     delete_local_file(results_file_path)
