@@ -79,12 +79,3 @@ The archive service employs a comprehensive approach to handle and archive resul
 
 - **Premium Users**: Immediate access to results and logs via the web interface.
 - **Free Users**: Results are archived. The web interface offers an upgrade option for result access if requested post-archival.
-
-## Deployment and Operations
-
-- **Infrastructure**: Deployment scripts and configuration management ensure that the EC2 instances, SQS queues, S3 buckets, and DynamoDB tables are correctly set up.
-- **Monitoring and Maintenance**: AWS CloudWatch monitors system health, while routine checks ensure operational integrity and security.
-
-## Conclusion
-
-This genomic annotation service represents a thoughtful application of AWS cloud services and EC2 instances to meet the specific needs of genomic data processing. It balances cost, efficiency, and user experience, providing a scalable solution for both immediate and long-term data handling.
