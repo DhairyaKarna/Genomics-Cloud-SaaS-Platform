@@ -15,6 +15,7 @@ import time
 import driver
 import os
 import boto3
+import json
 
 # Add the parent directory to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +38,7 @@ config.read("annotator_config.ini")
 s3 = boto3.client('s3', region_name=config.get('aws', 'AwsRegionName'))
 dynamodb = boto3.resource('dynamodb', region_name=config.get('aws', 'AwsRegionName'))
 table = dynamodb.Table(config.get('gas', 'AnnotationsTable'))
-sfn = boto3.client('stepfunctions')
+sfn = boto3.client('stepfunctions', region_name=config.get('aws', 'AwsRegionName'))
 
 class Timer(object):
     def __init__(self, verbose=True):
@@ -125,7 +126,7 @@ def start_sfn(job_id, user_id, results_s3_key):
         try:
             response = sfn.start_execution(
                 stateMachineArn = config.get('sfn', 'SfnArn'),
-                input = input_data
+                input = json.dumps(input_data)
             )
         except ClientError as e:
             error_code = e.response['Error']['Code']
