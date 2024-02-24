@@ -35,6 +35,13 @@ Archive free user results files
 
 
 def handle_archive_queue(sqs=None):
+    """ This method first reads the archive SQS to get the files to be archived.
+        Then it checks if the user is still a free user before starting the archiving, otherwise it just deletes the message.
+        s3.get_object is used to get the streaming body of the result file in s3. Then the .read() fucntion is used to convert it into streaming bytes.
+        glacier.upload_archive() is used to upload the streaming bytes into the vault
+        Finally s3.delete_object() is used to delete the results file from s3 gas-results bucket.
+        At the end the message is deleted from sqs regardless if the user was free or not.
+    """
 
     messages = {}
 
@@ -66,11 +73,13 @@ def handle_archive_queue(sqs=None):
             user = helpers.get_user_profile(user_id)
             role = user['role']
 
+            # Start archiving before checking for user role
             if role == "free_user":
                 s3_bucket_name = job_details['s3_bucket_name']
                 results_s3_key = job_details['results_s3_key']
 
                 # Getting S3 object for the results s3 key
+                # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_object.html
                 try:
                     result_object = s3.get_object(Bucket = s3_bucket_name, Key=results_s3_key)
                     data = result_object['Body'].read()
@@ -86,6 +95,7 @@ def handle_archive_queue(sqs=None):
                     print(f"Unexpected error when getting s3 object: {str(e)}")
 
                 # Uploading the Results file to glacier
+                # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/glacier/client/upload_archive.html
                 try:
                     response = glacier.upload_archive(vaultName=config.get('glacier', 'VaultName'), body=data)
 
@@ -97,6 +107,7 @@ def handle_archive_queue(sqs=None):
                     print(f"Unexpected error when uploading to glacier: {str(e)}")
 
                 # Deleting the file from S3
+                # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/delete_object.html
                 try:
                     s3.delete_object(Bucket=s3_bucket_name, Key=results_s3_key)
                     print(f"File {results_s3_key} deleted from bucket {s3_bucket_name}.")
