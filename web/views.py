@@ -235,7 +235,6 @@ def annotations_list():
         # Converting time to CST
         job['submit_time'] = epoch_to_CST(job['submit_time'])
 
-
     return render_template("annotations.html", annotations=jobs)
 
 

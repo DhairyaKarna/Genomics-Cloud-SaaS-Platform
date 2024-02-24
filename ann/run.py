@@ -16,6 +16,14 @@ import driver
 import os
 import boto3
 
+# Add the parent directory to sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+
+# Import helpers from util to get user profile (to check for Free users)
+from util import helpers
+
 # Get configuration
 from configparser import ConfigParser, ExtendedInterpolation
 
@@ -29,6 +37,7 @@ config.read("annotator_config.ini")
 s3 = boto3.client('s3', region_name=config.get('aws', 'AwsRegionName'))
 dynamodb = boto3.resource('dynamodb', region_name=config.get('aws', 'AwsRegionName'))
 table = dynamodb.Table(config.get('gas', 'AnnotationsTable'))
+sfn = boto3.client('stepfunctions')
 
 class Timer(object):
     def __init__(self, verbose=True):
@@ -100,6 +109,40 @@ def update_dynamodb(job_id, s3_results_bucket, s3_key_result_file, s3_key_log_fi
     except Exception as e:
         print(f"Unexpected error when updating DynamoDB: {str(e)}")
 
+
+def start_sfn(job_id, user_id, results_s3_key):
+
+    user = helpers.get_user_profile(user_id)
+    role = user['role']
+
+    if role == "free-user":
+        input_data = {
+        "job_id" : job_id,
+        "user_id" : user_id,
+        "results_s3_key" : results_s3_key
+        }
+
+        try:
+            response = sfn.start_execution(
+                stateMachineArn = config.get('sfn', 'SfnArn'),
+                input = input_data
+            )
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == 'ValidationException':
+                print("Input data or parameters are not valid.")
+            elif error_code == 'ExecutionLimitExceeded':
+                print("Execution limit exceeded.")
+            elif error_code == 'StateMachineDoesNotExist':
+                print("State machine does not exist.")
+            elif error_code == 'StateMachineDeleting':
+                print("State machine is currently deleting.")
+            else:
+                print(f"A client error occurred: {e}")
+        except Exception as e:
+            print(f"Unexpected error when updating DynamoDB: {str(e)}")
+
+            
 def delete_local_file(file_path):
     """
     Delete a file from the local file system
@@ -147,6 +190,9 @@ def main():
 
     # Update annotations database
     update_dynamodb(job_id, s3_bucket_name, results_s3_key, log_s3_key)
+
+    # Start the step function for archival process if user is FREE
+    start_sfn(job_id, user_id, results_s3_key)
 
     # Clean up local job files
     delete_local_file(results_file_path)
