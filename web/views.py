@@ -246,6 +246,7 @@ def annotations_list():
 def annotation_details(id):
     user_id = session.get("primary_identity")
     job_id = id
+    user_role = session.get("role")
     
     dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
     table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
@@ -265,7 +266,20 @@ def annotation_details(id):
         if 'complete_time' in job and job['job_status'] == 'COMPLETED':
             job['complete_time_formatted'] = epoch_to_CST(job['complete_time'])
 
-        return render_template("annotation.html", job=job)
+        show_upgrade_link = False  # Default to not showing the upgrade link
+        current_time = int(time.time())
+        current_time_string = epoch_to_CST(current_time)
+        current_time_object = datetime.strptime(current_time_string, '%Y-%m-%d %H:%M:%S')
+        completed_time_object = datetime.strptime(job['complete_time_formatted'], '%Y-%m-%d %H:%M:%S')
+
+        # Calculating the difference between now and completed time
+        difference = abs(current_time_object - completed_time_object)
+
+        if user_role == "free_user" and difference.total_seconds() > 180:
+            show_upgrade_link = True
+
+
+        return render_template("annotation.html", job=job, show_upgrade_link =show_upgrade_link)
         
     except ClientError as e:
         app.logger.error(f"Error fetching job details from DynamoDB: {e}")

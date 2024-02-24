@@ -30,7 +30,11 @@ University of Chicago
             <b>Complete Time: </b>{{ job.complete_time_formatted }}<br>
 
             <hr />
-            <b>Annotated Results File: </b><a href="{{ url_for('download_result', job_id=job.job_id) }}">download</a><br>
+            {% if show_upgrade_link %}
+                <b>Annotated Results File: </b><a href="{{ url_for('make_me_premium') }}">upgrade to Premium for download</a><br>
+            {% else %}
+                <b>Annotated Results File: </b><a href="{{ url_for('download_result', job_id=job.job_id) }}">download</a><br>
+            {% endif %}
             <b>Annotation Log File: </b><a href="{{ url_for('view_log', id=job.job_id) }}">view</a><br>
         {% endif %}
 
