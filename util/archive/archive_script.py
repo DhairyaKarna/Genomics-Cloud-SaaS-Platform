@@ -28,6 +28,8 @@ config.read("archive_script_config.ini")
 # Initializing AWS clients with config
 s3 = boto3.client('s3', region_name=config.get('aws', 'AwsRegionName'))
 glacier = boto3.client('glacier', region_name=config.get('aws', 'AwsRegionName'))
+dynamodb = boto3.resource('dynamodb', region_name=config.get('aws', 'AwsRegionName'))
+table = dynamodb.Table(config.get('gas', 'AnnotationsTable'))
 
 """A14
 Archive free user results files
@@ -83,7 +85,7 @@ def handle_archive_queue(sqs=None):
                 try:
                     result_object = s3.get_object(Bucket = s3_bucket_name, Key=results_s3_key)
                     data = result_object['Body'].read()
-
+                    
                 except ClientError as e:
                     if e.response['Error']['Code'] == 'NoSuchKey':
                         print("The specified key does not exist.")
@@ -94,17 +96,38 @@ def handle_archive_queue(sqs=None):
                 except Exception as e:
                     print(f"Unexpected error when getting s3 object: {str(e)}")
 
+                # Glacier Archive ID 
+                archive_id = None # To ensure archive_id is set to None in case of failure
+
                 # Uploading the Results file to glacier
                 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/glacier/client/upload_archive.html
                 try:
                     response = glacier.upload_archive(vaultName=config.get('glacier', 'VaultName'), body=data)
-
+                    archive_id = response['archiveId']
+                    print(f"File archived to Glacier with ID: {archive_id}")
                 except ClientError as e:
                     print(f"ClientError: {e}")
                 except BotoCoreError as e:
                     print(f"BotoCoreError: {e}")
                 except Exception as e:
                     print(f"Unexpected error when uploading to glacier: {str(e)}")
+
+                if archive_id:
+                    try:
+                        # Update the DynamoDB item with the Glacier archive ID
+                        update_response = table.update_item(
+                            Key={'job_id': job_id},
+                            UpdateExpression="set results_file_archive_id = :r",
+                            ExpressionAttributeValues={
+                                ':r': archive_id
+                            },
+                            ReturnValues="UPDATED_NEW"
+                        )
+                        print(f"DynamoDB item for job {job_id} updated with Glacier archive ID.")
+                    except ClientError as e:
+                        print(f"Error updating DynamoDB with Glacier archive ID: {e}")
+                    except Exception as e:
+                        print(f"Unexpected error when updating DynamoDB: {str(e)}")
 
                 # Deleting the file from S3
                 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/delete_object.html
