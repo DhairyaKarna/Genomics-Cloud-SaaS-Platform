@@ -115,7 +115,7 @@ def start_sfn(job_id, user_id, results_s3_key):
     user = helpers.get_user_profile(user_id)
     role = user['role']
 
-    if role == "free-user":
+    if role == "free_user":
         input_data = {
         "job_id" : job_id,
         "user_id" : user_id,
@@ -142,7 +142,7 @@ def start_sfn(job_id, user_id, results_s3_key):
         except Exception as e:
             print(f"Unexpected error when updating DynamoDB: {str(e)}")
 
-            
+
 def delete_local_file(file_path):
     """
     Delete a file from the local file system
