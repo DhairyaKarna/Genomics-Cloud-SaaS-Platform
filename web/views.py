@@ -103,6 +103,7 @@ homework assignments
 
 
 @app.route("/annotate/job", methods=["GET"])
+@authenticated
 def create_annotation_job_request():
 
     region = app.config["AWS_REGION_NAME"]
