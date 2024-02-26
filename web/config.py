@@ -131,8 +131,8 @@ class Config(object):
     # ************************************************************************
 
     # Stripe
-    STRIPE_PUBLIC_KEY = ""
-    STRIPE_SECRET_KEY = ""
+    STRIPE_PUBLIC_KEY = "pk_test_51OoB0RIcvDfW4wbdT3941UQJinpqjuZKcM2W0IvDdr2MwFDo9I7lmKZSTGt9TA8MJRHkXrhvptCRy57gsL3HCQFL00uZjw7rmR"
+    STRIPE_SECRET_KEY = "sk_test_51OoB0RIcvDfW4wbdIUX76nNHCFoVIstQVe9F3ASqEMZDPh8MuV7KKTlS6e3lGqki277QlZwhfrQL5GJRDL2vFW0K00o7TO6FNp"
     STRIPE_PRICE_ID = ""
 
     # Set validity of pre-signed POST requests (in seconds)
