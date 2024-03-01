@@ -113,7 +113,13 @@ def update_dynamodb(job_id, s3_results_bucket, s3_key_result_file, s3_key_log_fi
 
 def start_sfn(job_id, user_id, results_s3_key, s3_bucket_name):
 
-    user = helpers.get_user_profile(user_id)
+    
+    try:
+        user = helpers.get_user_profile(user_id)
+    except Exception as e:
+        print(f'Unexpected error when getting user profile data: {str(e)}')
+        sys.exit(1) # Exit the script with an error code if fetching the user profile fails
+
     role = user['role']
 
     if role == "free_user":

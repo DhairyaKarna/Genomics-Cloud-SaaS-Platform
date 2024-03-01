@@ -113,7 +113,8 @@ def create_annotation_job_request():
     s3_key = request.args.get("key")
 
     if not bucket_name or not s3_key:
-        return jsonify({"code": 400, "status": "error", "message": "Missing bucket or key parameters"}), 400
+        app.logger.error("Missing bucket or key parameters")
+        abort(400, description="Missing bucket or key parameters")
 
     # Extract the job ID from the S3 key
     file_name = s3_key.split('/')[-1]
@@ -147,10 +148,11 @@ def create_annotation_job_request():
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/put_item.html
         table.put_item(Item=data)
     except ClientError as e:
-        error_code = e.response['Error']['Code']
-        return jsonify({"code": 500, "status": "error", "message": f"DynamoDB client error: {error_code}"}), 500
+        app.logger.exception("DynamoDB Client Error")
+        abort(500, description=f"DynamoDB client error: {e.response['Error']['Code']}")
     except Exception as e:
-        return jsonify({"code": 500, "status": "error", "message": f"Error persisting job details to DynamoDB: {e}"}), 500
+        app.logger.exception("Encountered an error persisting details to DynamoDB")
+        abort(500, description=f"Error persisting job details to DynamoDB: {e}")
 
     # Send message to request queue
     sns = boto3.client('sns', region_name=app.config["AWS_REGION_NAME"])
@@ -161,10 +163,11 @@ def create_annotation_job_request():
         sns.publish(TopicArn=app.config['AWS_SNS_JOB_REQUEST_TOPIC'], Message = json.dumps(data), Subject = 'Job Submission')
 
     except ClientError as e:
-        error_code = e.response['Error']['Code']
-        return jsonify({"code": 500, "status": "error", "message": f"DynamoDB client error: {error_code}"}), 500
-    except BotoCoreError as e:
-        return jsonify({"code": 500, "message": f"Boto core error in generating signed request: {e}"}), 500
+        app.logger.exception("SNS Client Error")
+        abort(500, description=f"SNS client error: {e.response['Error']['Code']}")
+    except Exception as e:
+        app.logger.exception("Encountered an error publishing details to SNS")
+        abort(500, description=f"Error publishing job details to SNS: {e}")
 
     return render_template("annotate_confirm.html", job_id=job_id)
 
@@ -248,6 +251,7 @@ def annotation_details(id):
     user_id = session.get("primary_identity")
     job_id = id
 
+
     # In case of new user who just registered, the role field is not populated, To handle that the default value for role is free_user
     user_role = session.get("role", "free_user")
     
@@ -261,8 +265,14 @@ def annotation_details(id):
         job = response.get('Item', None)
         
         # Check if the job exists and belongs to the user
-        if not job or job.get('user_id') != user_id:
-            abort(403)  # Forbidden if job doesn't exist or doesn't belong to the user
+        if not job:
+            app.logger.error('Job not found')
+            abort(404, description="Job not found")
+        if job.get('user_id') != user_id:
+            # Forbidden if job doesn't belong to the user
+            app.logger.error('Job does not belong to the current user')
+            abort(403, description="Job does not belong to the current user")     
+
 
         # Convert epoch times to CST
         job['request_time_formatted'] = epoch_to_CST(job['submit_time'])
@@ -309,12 +319,17 @@ def download_input(job_id):
         job = response.get('Item', None)
         
         # Check if the job exists and belongs to the user
-        if not job or job.get('user_id') != user_id:
-            abort(403)  # Forbidden if job doesn't exist or doesn't belong to the user
+        if not job:
+            app.logger.error('Job not found')
+            abort(404, description="Job not found")
+        if job.get('user_id') != user_id:
+            # Forbidden if job doesn't belong to the user
+            app.logger.error('Job does not belong to the current user')
+            abort(403, description="Job does not belong to the current user")   
         
         # Generate the pre-signed URL for the input file
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/generate_presigned_url.html
-        s3_client = boto3.client('s3')
+        s3_client = boto3.client('s3', region_name=app.config["AWS_REGION_NAME"])
         presigned_url = s3_client.generate_presigned_url('get_object',
                                                          Params={'Bucket': job['s3_inputs_bucket'],
                                                                  'Key': job['s3_key_input_file']},
@@ -346,8 +361,16 @@ def download_result(job_id):
         job = response.get('Item', None)
         
         # Check if the job exists and belongs to the user and is completed
-        if not job or job.get('user_id') != user_id or job.get('job_status') != 'COMPLETED':
-            abort(403)  # Forbidden if job doesn't exist, doesn't belong to the user, or is not completed
+        if not job:
+            app.logger.error('Job not found')
+            abort(404, description="Job not found")
+        if job.get('user_id') != user_id:
+            # Forbidden if job doesn't belong to the user
+            app.logger.error('Job does not belong to the current user')
+            abort(403, description="Job does not belong to the current user") 
+        if job.get('job_status') != 'COMPLETED':
+            app.logger.error('Job  is not completed')
+            abort(404, description="Job is not completed")
         
         # Generate the pre-signed URL for the results file
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/generate_presigned_url.html
@@ -383,8 +406,16 @@ def view_log(id):
         job = response.get('Item', None)
         
         # Check if the job exists, belongs to the user and is completed
-        if not job or job.get('user_id') != user_id or job.get('job_status') != 'COMPLETED':
-            abort(403)  # Forbidden if job doesn't exist, doesn't belong to the user, or is not completed
+        if not job:
+            app.logger.error('Job not found')
+            abort(404, description="Job not found")
+        if job.get('user_id') != user_id:
+            # Forbidden if job doesn't belong to the user
+            app.logger.error('Job does not belong to the current user')
+            abort(403, description="Job does not belong to the current user") 
+        if job.get('job_status') != 'COMPLETED':
+            app.logger.error('Job  is not completed')
+            abort(404, description="Job is not completed")
 
         # Read the log file content from S3
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_object.html
@@ -416,21 +447,44 @@ def subscribe():
 
     elif request.method == "POST":
         # Process the subscription request
+            stripe_token = request.form['stripe_token']
 
-        # Create a customer on Stripe
+            # Create a customer on Stripe
+            customer = stripe.Customer.create(
+                email=session['email'],  
+                name=session.get('name'), 
+                source=stripe_token
+            )
 
-        # Subscribe customer to pricing plan
+            # Subscribe customer to pricing plan
+            subscription = stripe.Subscription.create(
+                customer=customer.id,
+                items=[
+                    {"price": "your_price_id"},
+                ],
+            )
 
-        # Update user role in accounts database
+            # Update user role in accounts database
+            update_profile(session['user_id'], role='premium_user')  
 
-        # Update role in the session
 
-        # Request restoration of the user's data from Glacier
-        # ...add code here to initiate restoration of archived user data
-        # ...and make sure you handle files pending archive!
+            # Update role in the session
+            session['role'] = 'premium_user'
 
-        # Display confirmation page
-        pass
+            # Request restoration of the user's data from Glacier
+            # ...add code here to initiate restoration of archived user data
+            # ...and make sure you handle files pending archive!
+
+            # Display confirmation page
+            return render_template("subscribe_confirm.html", customer=customer, subscription=subscription)
+
+        except stripe.error.StripeError as e:
+            # Handle Stripe errors (e.g., invalid token, network issues)
+            return render_template("error.html", title="Stripe Error", message=str(e), alert_level="warning")
+
+        except Exception as e:
+            # Handle other exceptions
+            return render_template("error.html", title="Error", message=str(e), alert_level="warning")
 
 
 """DO NOT CHANGE CODE BELOW THIS LINE

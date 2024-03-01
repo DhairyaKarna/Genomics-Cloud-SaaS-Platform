@@ -31,12 +31,6 @@ s3 = boto3.client('s3', region_name=config.get('aws', 'AwsRegionName'))
 dynamodb = boto3.resource('dynamodb', region_name=config.get('aws', 'AwsRegionName'))
 table = dynamodb.Table(config.get('gas', 'AnnotationsTable'))
 
-# Getting the current path to save the data and run the annotator
-BASE_DIR = os.path.abspath(os.path.dirname(__file__)) + "/"
-ANN_DIR = BASE_DIR + "run.py"
-DATA_DIR = BASE_DIR + "data/" 
-
-
 def update_dynamodb(job_id):
     # To catch error while updating the table
         try:
@@ -101,9 +95,9 @@ def handle_requests_queue(sqs=None):
             file_name = s3_key_input_file.split('/')[-1]  # Extract file name from s3_key_input_file
 
             # Checking for Data directory and creating a file path for download 
-            if not os.path.exists(DATA_DIR):
-                os.makedirs(DATA_DIR)
-            file_path = os.path.join(DATA_DIR, file_name)  
+            if not os.path.exists(config.get('ann', 'data_dir')):
+                os.makedirs(config.get('ann', 'data_dir'))
+            file_path = os.path.join(config.get('ann', 'data_dir'), file_name)  
 
 
             # To catch error while downloading files from s3 bucket
@@ -127,7 +121,7 @@ def handle_requests_queue(sqs=None):
             if successful_download:
                 # To Catch errors in subprocess or when deleting message
                 try:
-                    Popen(['python', ANN_DIR, file_path, job_id, user_id])
+                    Popen(['python', config.get('ann', 'ann_dir'), file_path, job_id, user_id])
 
                     update_dynamodb(job_id)
 

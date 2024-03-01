@@ -72,7 +72,12 @@ def handle_archive_queue(sqs=None):
             job_id = job_details['job_id']
             user_id = job_details['user_id']
 
-            user = helpers.get_user_profile(user_id)
+            
+            try:
+                user = helpers.get_user_profile(user_id)
+            except Exception as e:
+                print(f'Unexpected error when getting user profile data: {str(e)}')
+                sys.exit(1) # Exit the script with an error code if fetching the user profile fails
             role = user['role']
 
             # Start archiving before checking for user role

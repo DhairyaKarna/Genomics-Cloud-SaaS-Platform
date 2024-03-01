@@ -28,6 +28,26 @@ University of Chicago
                 <span class="payment-errors"></span>
 
                 <!-- GET USER CREDIT CARD DETAILS -->
+                <div class="form-group">
+                    <label for="cc-name">Name on Credit Card:</label>
+                    <input class="form-control input-lg required" type="text" data-stripe="name" placeholder="Name on Credit Card">
+                </div>
+                <div class="form-group">
+                    <label for="cc-number">Credit Card Number:</label>
+                    <input class="form-control input-lg required" type="text" size="20" data-stripe="number" placeholder="4242 4242 4242 4242">
+                </div>
+                <div class="form-group">
+                    <label for="cc-cvc">Credit Card Verification Code:</label>
+                    <input class="form-control input-lg required" type="text" size="4" data-stripe="cvc" placeholder="CVC">
+                </div>
+                <div class="form-group">
+                    <label for="cc-exp-month">Credit Card Expiration Month:</label>
+                    <input class="form-control input-lg required" type="text" size="2" data-stripe="exp-month" placeholder="MM">
+                </div>
+                <div class="form-group">
+                    <label for="cc-exp-year">Credit Card Expiration Year:</label>
+                    <input class="form-control input-lg required" type="text" size="4" data-stripe="exp-year" placeholder="YYYY">
+                </div>
         
                 <br />
 
