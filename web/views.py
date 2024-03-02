@@ -442,30 +442,34 @@ def subscribe():
     if request.method == "GET":
         # Display form to get subscriber credit card info
 
-        # If A15 not completed, force-upgrade user role and initiate restoration
-        pass
+        return render_template("subscribe.html")
 
     elif request.method == "POST":
-        # Process the subscription request
+        try:
+            # Process the subscription request
             stripe_token = request.form['stripe_token']
 
+            stripe.api_key = app.config['STRIPE_SECRET_KEY']
+
             # Create a customer on Stripe
+            # https://www.altcademy.com/codedb/examples/create-a-stripe-customer-from-an-email-address-in-python
             customer = stripe.Customer.create(
                 email=session['email'],  
                 name=session.get('name'), 
-                source=stripe_token
+                card=stripe_token
             )
 
             # Subscribe customer to pricing plan
+            # https://docs.stripe.com/api/subscriptions/create
             subscription = stripe.Subscription.create(
                 customer=customer.id,
                 items=[
-                    {"price": customer.price_id},
+                    {"price": app.config['STRIPE_PRICE_ID']},
                 ],
             )
 
             # Update user role in accounts database
-            update_profile(session['user_id'], role='premium_user')  
+            update_profile(session['primary_identity'], role='premium_user')  
 
 
             # Update role in the session
@@ -476,7 +480,7 @@ def subscribe():
             # ...and make sure you handle files pending archive!
 
             # Display confirmation page
-            return render_template("subscribe_confirm.html", customer=customer, subscription=subscription)
+            return render_template("subscribe_confirm.html", stripe_id=subscription.id)
 
         except stripe.error.StripeError as e:
             # Handle Stripe errors (e.g., invalid token, network issues)

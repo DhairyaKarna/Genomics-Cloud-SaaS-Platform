@@ -31,7 +31,7 @@ University of Chicago
 
             <hr />
             {% if show_upgrade_link %}
-                <b>Annotated Results File: </b><a href="{{ url_for('make_me_premium') }}">upgrade to Premium for download</a><br>
+                <b>Annotated Results File: </b><a href="{{ url_for('subscribe') }}">upgrade to Premium for download</a><br>
             {% else %}
                 <b>Annotated Results File: </b><a href="{{ url_for('download_result', job_id=job.job_id) }}">download</a><br>
             {% endif %}
