@@ -460,7 +460,7 @@ def subscribe():
             subscription = stripe.Subscription.create(
                 customer=customer.id,
                 items=[
-                    {"price": "your_price_id"},
+                    {"price": customer.price_id},
                 ],
             )
 
