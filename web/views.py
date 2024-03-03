@@ -277,7 +277,7 @@ def annotation_details(id):
 
         # Convert epoch times to CST
         job['request_time_formatted'] = epoch_to_CST(job['submit_time'])
-        if 'complete_time' in job and job['job_status'] == 'COMPLETED':
+        if 'complete_time' in job and (job['job_status'] == 'COMPLETED' or job['job_status'] == 'RESTORING'):
             job['complete_time_formatted'] = epoch_to_CST(job['complete_time'])
 
         
@@ -291,7 +291,6 @@ def annotation_details(id):
 
             if user_role == "free_user" and difference.total_seconds() > 180:
                 show_upgrade_link = True
-
 
         return render_template("annotation.html", job=job, show_upgrade_link =show_upgrade_link)
         

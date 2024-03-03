@@ -38,6 +38,14 @@ University of Chicago
             <b>Annotation Log File: </b><a href="{{ url_for('view_log', id=job.job_id) }}">view</a><br>
         {% endif %}
 
+        {% if job.job_status == 'RESTORING' %}
+            <b>Complete Time: </b>{{ job.complete_time_formatted }}<br>
+
+            <hr />
+            <b>Annotated Results File: </b>File is being restored; please check back later<br>
+            <b>Annotation Log File: </b><a href="{{ url_for('view_log', id=job.job_id) }}">view</a><br>
+        {% endif %}
+
         <hr />
 
         <a href="{{ url_for('annotations_list') }}">&larr; back to annotations list</a>
