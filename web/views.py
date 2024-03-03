@@ -469,20 +469,6 @@ def subscribe():
                 ],
             )
 
-            # Update user role in accounts database
-            update_profile(session['primary_identity'], role='premium_user')  
-
-
-            # Update role in the session
-            session['role'] = 'premium_user'
-
-            # Request restoration of the user's data from Glacier
-            # ...add code here to initiate restoration of archived user data
-            # ...and make sure you handle files pending archive!
-
-            # Display confirmation page
-            return render_template("subscribe_confirm.html", stripe_id=subscription.id)
-
         except stripe.error.StripeError as e:
             # Handle Stripe errors (e.g., invalid token, network issues)
             return render_template("error.html", title="Stripe Error", message=str(e), alert_level="warning")
@@ -490,6 +476,61 @@ def subscribe():
         except Exception as e:
             # Handle other exceptions
             return render_template("error.html", title="Error", message=str(e), alert_level="warning")
+
+
+        user_id = session["primary_identity"]
+
+        # Update user role in accounts database
+        update_profile(user_id, role='premium_user')  
+
+
+        # Update role in the session
+        session['role'] = 'premium_user'
+
+        
+        dynamodb = boto3.resource('dynamodb', region_name=app.config["AWS_REGION_NAME"])
+        table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+
+
+        try:
+        # Query the DynamoDB table using the secondary index and filter for jobs with a results_file_archive_id
+        response = table.query(
+            IndexName='user_id_index',
+            KeyConditionExpression=Key('user_id').eq(user_id),
+            FilterExpression=Attr('results_file_archive_id').exists()
+        )
+        except ClientError as e:
+            app.logger.error(f"Error querying DynamoDB: {e}")
+            abort(500)  # Internal Server Error
+        except Exception as e:
+            app.logger.error(f"Unexpected error: {str(e)}")
+            abort(500)  # Internal Server Error
+
+
+
+        # Get list of annotations to display
+        jobs = response.get('Items', [])
+
+
+        # Request restoration of the user's data from Glacier
+        sns_client = boto3.client('sns', region_name=app.config['AWS_REGION_NAME'])
+
+        for job in job_ids:
+            if 'results_file_archive_id' in job:
+                message = {
+                    "job_id": job['job_id'],
+                    "user_id": user_id,
+                    "results_file_archive_id": job['results_file_archive_id']
+                }
+
+                # Publish message to the SNS topic
+                sns_client.publish(TopicArn=app.config['AWS_SNS_THAW_REQUEST_TOPIC'], Message = json.dumps(message), Subject = 'Thaw Request Submission')
+
+
+        # Display confirmation page
+        return render_template("subscribe_confirm.html", stripe_id=subscription.id)
+
+        
 
 
 """DO NOT CHANGE CODE BELOW THIS LINE
