@@ -104,6 +104,7 @@ def handle_thaw_queue(sqs=None):
                 # Process messages --> initiate restore from Glacier
                 archive_id = job_details['results_file_archive_id']
                 success, thaw_id = initiate_restore(archive_id)
+                job_id = job_details['job_id']
 
                 if success:
                     sns_client = boto3.client('sns', region_name=config.get('aws', 'AwsRegionName'))
