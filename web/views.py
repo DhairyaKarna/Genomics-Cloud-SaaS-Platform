@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 import boto3
 from botocore.client import Config
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
 
 from flask import abort, flash, redirect, render_template, request, session, url_for
@@ -493,12 +493,12 @@ def subscribe():
 
 
         try:
-        # Query the DynamoDB table using the secondary index and filter for jobs with a results_file_archive_id
-        response = table.query(
-            IndexName='user_id_index',
-            KeyConditionExpression=Key('user_id').eq(user_id),
-            FilterExpression=Attr('results_file_archive_id').exists()
-        )
+            # Query the DynamoDB table using the secondary index and filter for jobs with a results_file_archive_id
+            response = table.query(
+                IndexName='user_id_index',
+                KeyConditionExpression=Key('user_id').eq(user_id),
+                FilterExpression=Attr('results_file_archive_id').exists()
+            )
         except ClientError as e:
             app.logger.error(f"Error querying DynamoDB: {e}")
             abort(500)  # Internal Server Error
@@ -515,7 +515,7 @@ def subscribe():
         # Request restoration of the user's data from Glacier
         sns_client = boto3.client('sns', region_name=app.config['AWS_REGION_NAME'])
 
-        for job in job_ids:
+        for job in jobs:
             if 'results_file_archive_id' in job:
                 message = {
                     "job_id": job['job_id'],
