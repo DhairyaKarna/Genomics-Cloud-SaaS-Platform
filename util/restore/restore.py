@@ -18,7 +18,7 @@ AWS_REGION_NAME = "us-east-1"
 
 
 # Initiating AWS clients 
-s3 = boto3.client('s3', region_name=AWS_REGION_NAME)
+s3_client = boto3.client('s3', region_name=AWS_REGION_NAME)
 dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION_NAME)
 table = dynamodb.Table(DYNAMODB_TABLE)
 glacier = boto3.client('glacier', region_name=AWS_REGION_NAME)
@@ -26,8 +26,8 @@ glacier = boto3.client('glacier', region_name=AWS_REGION_NAME)
 def lambda_handler(event, context):
     # Log the received event
     print("Received event: " + json.dumps(event, indent=2))
-
-     # Extract job details from the event
+    
+    # Extract job details from the event
     job_id = event['job_id']
     thaw_id = event['thaw_id']
     archive_id = event['archive_id']
@@ -78,7 +78,7 @@ def lambda_handler(event, context):
     # Delete the archive from Glacier
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/glacier/client/delete_archive.html
     try:
-        glacier.delete_archive(vaultName=GLACIER_VAULT, archiveId=archive_id)
+        glacier.delete_archive(vaultName=GLACIER_VAULT_NAME, archiveId=archive_id)
         print(f"Archive {archive_id} deleted from Glacier successfully.")
     except ClientError as e:
         print(f"Error deleting archive from Glacier: {str(e)}")
@@ -118,6 +118,7 @@ def lambda_handler(event, context):
         'statusCode': 200,
         'body': json.dumps('Hello from Lambda!')
     }
+
 
 
 ### EOF
