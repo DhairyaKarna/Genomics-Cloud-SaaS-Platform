@@ -34,12 +34,13 @@ Initiate thawing of archived objects from Glacier
 s3 = boto3.client('s3', region_name=config.get('aws', 'AwsRegionName'))
 dynamodb = boto3.resource('dynamodb', region_name=config.get('aws', 'AwsRegionName'))
 table = dynamodb.Table(config.get('gas', 'AnnotationsTable'))
+glacier = boto3.client('glacier', region_name=config.get('aws', 'AwsRegionName'))
 
 def initiate_restore(archive_id, retrieval_type='Expedited'):
 
-    glacier = boto3.client('glacier', region_name=config.get('aws', 'AwsRegionName'))
-
     try:
+        # Initiate archive retrieval job
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/glacier/client/initiate_job.html
         response = glacier.initiate_job(
             vaultName=config.get('glacier', 'VaultName'),
             jobParameters={
@@ -65,10 +66,13 @@ def initiate_restore(archive_id, retrieval_type='Expedited'):
             else:
                 print(f"Error restoring file through {retrieval_type}, due to {e.response['Error']}")
                 return False, None
-
         else:
             print(f"Error initiating restore: {e}")
             return False, None
+
+    except Exception as e:
+        print(f"Error initiating restore: {e}")
+        return False, None
 
 
 def handle_thaw_queue(sqs=None):
@@ -106,6 +110,7 @@ def handle_thaw_queue(sqs=None):
 
                     # Change the thaw status and push it as a new message in the queue
                     job_details['thaw_status'] = "IN PROGRESS"
+                    job_details['thaw_id'] = thaw_id
 
                     try:
                         # Publish new Process message to the SNS topic
@@ -113,24 +118,100 @@ def handle_thaw_queue(sqs=None):
                         sns_client.publish(TopicArn=config.get('sns', 'TopicArn'), Message = json.dumps(job_details), Subject = 'Thaw Process Submission')
                     except ClientError as e:
                         print("SNS Clinet Error when publishing Thaw process message")
+                        break
                     except Exception as e:
                         print(f"Error publishing process message to SNS: {e} ")
+                        break
+
+
+                    try:
+                        response = table.update_item(
+                            Key={'job_id': job_id},
+                            UpdateExpression='SET job_status = :status',
+                            ExpressionAttributeValues={
+                                ':status': 'RESTORING'
+                            },
+                            ReturnValues='UPDATED_NEW'
+                        )
+                        print(f"Successfully updated job {job_id} to RESTORING status.")
+                    except ClientError as e:
+                        print(f"Error updating DynamoDB: {e.response['Error']['Message']}")
+                        break
+                    except Exception as e:
+                        print(f"Unexpected error when updating DynamoDB: {str(e)}")
+                        break
 
                     try:
                         # Delete message from queue after successful processing
                         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html#SQS.Client.delete_message
                         sqs.delete_message(QueueUrl=config.get('sqs', 'SqsUrl'), ReceiptHandle=message['ReceiptHandle'])
                     except ClientError as e:
-                        print(f"Client error: {e}")
+                        print(f"Client error deleting thaw status message: {e}")
                     except Exception as e:
                         # General exception for any other unforeseen errors
-                        print(f"Error message: {str(e)}")
+                        print(f"Error message deleting thaw status message: {str(e)}")
+
 
                 else:
                     print("Could not start Thaw Process")
 
-            
 
+            if job_details['thaw_status'] == "IN PROGRESS":
+                thaw_id = job_details['thaw_id']
+
+                try:
+                    # To get the retrieval job status 
+                    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/glacier/client/describe_job.html
+                    response = glacier.describe_job(
+                        vaultName=config.get('glacier', 'VaultName'),
+                        jobId=thaw_id
+                    )
+                    status = response['Completed']
+
+                except ClientError as e:
+                    print("Client error when retrieving thaw job details")
+                except Exception as e:
+                    print(f"Error retrieving thaw job details: {e}")
+
+                if status:
+                    print("Thaw completed")
+
+                    # Creating Payload to start the Lambda Function
+                    lambda_client = boto3.client('lambda', region_name=config.get('aws', 'AwsRegionName'))
+
+                    payload = {
+                        "job_id": job_details['job_id'],
+                        "user_id": job_details['user_id'],
+                        "s3_results_bucket": job_details['s3_results_bucket'],
+                        "s3_key_result_file": job_details['s3_key_result_file'],
+                        "archive_id": job_details['results_file_archive_id'],
+                        "thaw_id": job_details['thaw_id']
+                    }
+
+                    try:
+                        # Invoking lambda with the payload
+                        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/lambda/client/invoke.html
+                        response = lambda_client.invoke(
+                            FunctionName=config.get('lambda', 'FunctionName'),
+                            Payload=json.dumps(payload),
+                        )
+                    except ClientError as e:
+                        print("Client error when invoking lambda")
+                        break
+                    except Exception as e:
+                        print(f"Error invoking lambda: {e}")
+                        break
+
+
+                    try:
+                        # Delete message from queue after successful processing
+                        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html#SQS.Client.delete_message
+                        sqs.delete_message(QueueUrl=config.get('sqs', 'SqsUrl'), ReceiptHandle=message['ReceiptHandle'])
+                    except ClientError as e:
+                        print(f"Client error deleting thaw process message: {e}")
+                    except Exception as e:
+                        # General exception for any other unforeseen errors
+                        print(f"Error message deleting thaw process message: {str(e)}")
 
 
 def main():
