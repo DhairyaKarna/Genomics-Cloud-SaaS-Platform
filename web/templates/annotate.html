@@ -57,7 +57,7 @@ University of Chicago
                 // Function to check file size
                 function checkFileSize(event) {
                     const file = event.target.files[0];
-                    if (file && role === 'free' && file.size > 150000) { // 150KB limit for free users
+                    if (file && role === 'free_user' && file.size > 150000) { // 150KB limit for free users
                         alert("File is too large for free users. Please subscribe to upload larger files.");
                         uploadFileInput.value = ''; // Reset file input
                         annotateButton.disabled = true; // Keep the annotate button disabled

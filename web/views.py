@@ -273,23 +273,24 @@ def annotation_details(id):
             app.logger.error('Job does not belong to the current user')
             abort(403, description="Job does not belong to the current user")     
 
+        show_upgrade_link = False  # Default to not showing the upgrade link
 
         # Convert epoch times to CST
         job['request_time_formatted'] = epoch_to_CST(job['submit_time'])
         if 'complete_time' in job and job['job_status'] == 'COMPLETED':
             job['complete_time_formatted'] = epoch_to_CST(job['complete_time'])
 
-        show_upgrade_link = False  # Default to not showing the upgrade link
-        current_time = int(time.time())
-        current_time_string = epoch_to_CST(current_time)
-        current_time_object = datetime.strptime(current_time_string, '%Y-%m-%d %H:%M:%S')
-        completed_time_object = datetime.strptime(job['complete_time_formatted'], '%Y-%m-%d %H:%M:%S')
+        
+            current_time = int(time.time())
+            current_time_string = epoch_to_CST(current_time)
+            current_time_object = datetime.strptime(current_time_string, '%Y-%m-%d %H:%M:%S')
+            completed_time_object = datetime.strptime(job['complete_time_formatted'], '%Y-%m-%d %H:%M:%S')
 
-        # Calculating the difference between now and completed time
-        difference = abs(current_time_object - completed_time_object)
+            # Calculating the difference between now and completed time
+            difference = abs(current_time_object - completed_time_object)
 
-        if user_role == "free_user" and difference.total_seconds() > 180:
-            show_upgrade_link = True
+            if user_role == "free_user" and difference.total_seconds() > 180:
+                show_upgrade_link = True
 
 
         return render_template("annotation.html", job=job, show_upgrade_link =show_upgrade_link)
