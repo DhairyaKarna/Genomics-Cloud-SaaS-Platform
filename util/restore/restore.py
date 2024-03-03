@@ -24,7 +24,8 @@ table = dynamodb.Table(DYNAMODB_TABLE)
 glacier = boto3.client('glacier', region_name=AWS_REGION_NAME)
 
 def lambda_handler(event, context):
-    # print("Received event: " + json.dumps(event, indent=2))
+    # Log the received event
+    print("Received event: " + json.dumps(event, indent=2))
 
      # Extract job details from the event
     job_id = event['job_id']
