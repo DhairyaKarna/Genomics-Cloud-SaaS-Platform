@@ -46,8 +46,41 @@ University of Chicago
         </div>
 
         <script>
-        // Add JS code to prevent input files larger than 150K for free users
-        // Add JS code to disable submit button if file is not selected
+            document.addEventListener("DOMContentLoaded", function() {
+                const uploadFileInput = document.getElementById('upload-file');
+                const annotateButton = document.getElementById('annotateButton');
+                const role = "{{ role }}"; // Getting the role from the Flask template
+
+                // Initially disable the annotate button
+                annotateButton.disabled = true;
+
+                // Function to check file size
+                function checkFileSize(event) {
+                    const file = event.target.files[0];
+                    if (file && role === 'free' && file.size > 150000) { // 150KB limit for free users
+                        alert("File is too large for free users. Please subscribe to upload larger files.");
+                        uploadFileInput.value = ''; // Reset file input
+                        annotateButton.disabled = true; // Keep the annotate button disabled
+                    } else {
+                        annotateButton.disabled = false; // Enable the annotate button if file size is within limits
+                    }
+                }
+
+                // Function to enable/disable the annotate button
+                function toggleAnnotateButton() {
+                    if (uploadFileInput.value) {
+                        annotateButton.disabled = false;
+                    } else {
+                        annotateButton.disabled = true;
+                    }
+                }
+
+                // Listen for file input changes to check file size
+                uploadFileInput.addEventListener('change', checkFileSize);
+
+                // Listen for file input changes to toggle annotate button
+                uploadFileInput.addEventListener('change', toggleAnnotateButton);
+            });
         </script>
     
     </div> <!-- container -->
