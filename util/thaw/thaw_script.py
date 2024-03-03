@@ -196,6 +196,7 @@ def handle_thaw_queue(sqs=None):
                             FunctionName=config.get('lambda', 'FunctionName'),
                             Payload=json.dumps(payload),
                         )
+                        print("Successfully invoked lambda with the payload")
                     except ClientError as e:
                         print("Client error when invoking lambda")
                         break
@@ -208,6 +209,7 @@ def handle_thaw_queue(sqs=None):
                         # Delete message from queue after successful processing
                         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html#SQS.Client.delete_message
                         sqs.delete_message(QueueUrl=config.get('sqs', 'SqsUrl'), ReceiptHandle=message['ReceiptHandle'])
+                        print("Successfully deleted the message")
                     except ClientError as e:
                         print(f"Client error deleting thaw process message: {e}")
                     except Exception as e:
