@@ -520,11 +520,23 @@ def subscribe():
                 message = {
                     "job_id": job['job_id'],
                     "user_id": user_id,
-                    "results_file_archive_id": job['results_file_archive_id']
+                    "results_file_archive_id": job['results_file_archive_id'],
+                    "s3_results_bucket": job['s3_results_bucket'],
+                    "s3_key_result_file": job['s3_key_result_file'],
+                    "thaw_status": "STARTED"
                 }
 
-                # Publish message to the SNS topic
-                sns_client.publish(TopicArn=app.config['AWS_SNS_THAW_REQUEST_TOPIC'], Message = json.dumps(message), Subject = 'Thaw Request Submission')
+                try:
+                    # Publish message to the SNS topic
+                    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
+                    sns_client.publish(TopicArn=app.config['AWS_SNS_THAW_REQUEST_TOPIC'], Message = json.dumps(message), Subject = 'Thaw Request Submission')
+
+                except ClientError as e:
+                    app.logger.exception("SNS Client Error")
+                    abort(500, description=f"SNS client error: {e.response['Error']['Code']}")
+                except Exception as e:
+                    app.logger.exception("Encountered an error publishing details to SNS")
+                    abort(500, description=f"Error publishing job details to SNS: {e}")
 
 
         # Display confirmation page
