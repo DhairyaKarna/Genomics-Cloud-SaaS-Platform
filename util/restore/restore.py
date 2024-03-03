@@ -96,7 +96,7 @@ def lambda_handler(event, context):
     try:
         table.update_item(
             Key={'job_id': job_id},
-            UpdateExpression='SET job_status = :status',
+            UpdateExpression='SET job_status = :status REMOVE results_file_archive_id',
             ExpressionAttributeValues={':status': 'COMPLETED'}
         )
     except ClientError as e:
