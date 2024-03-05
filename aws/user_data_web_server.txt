@@ -1,3 +1,24 @@
-#!/bin/bash -ex
+#!/bin/bash
+
+# Copy GAS code from S3
+aws s3 cp s3://mpcs-resources/dhairyakarna/gas.zip /home/ubuntu/gas.zip
+
+# Unzip the GAS code
+unzip /home/ubuntu/gas.zip -d /home/ubuntu/
+
+# Remove the zip file
+rm /home/ubuntu/gas.zip
+
+# Change file ownership
+chown ubuntu:ubuntu -R /home/ubuntu/gas/
+
+# Navigate to web directory
+cd /home/ubuntu/gas/web
+
+# Setting the environment
+workon mpcs 
+
+# Run the server
+./run_gas.sh console
 
 ### EOUserData
