@@ -11,7 +11,6 @@
 #
 # ************************************************************************
 ##
-__author__ = "Vas Vasiliadis <vas@uchicago.edu>"
 
 import boto3
 import json
@@ -131,37 +130,37 @@ class Config(object):
     # ************************************************************************
 
     # Stripe
-    STRIPE_PUBLIC_KEY = "pk_test_51OoB0RIcvDfW4wbdT3941UQJinpqjuZKcM2W0IvDdr2MwFDo9I7lmKZSTGt9TA8MJRHkXrhvptCRy57gsL3HCQFL00uZjw7rmR"
-    STRIPE_SECRET_KEY = "sk_test_51OoB0RIcvDfW4wbdIUX76nNHCFoVIstQVe9F3ASqEMZDPh8MuV7KKTlS6e3lGqki277QlZwhfrQL5GJRDL2vFW0K00o7TO6FNp"
-    STRIPE_PRICE_ID = "price_1OoB3QIcvDfW4wbdWtfZyTpy"
+    STRIPE_PUBLIC_KEY = "YOUR_STRIPE_PUBLIC_KEY"
+    STRIPE_SECRET_KEY = "YOUR_STRIPE_SECRET_KEY"
+    STRIPE_PRICE_ID = "YOUR_STRIPE_PRICE_ID"
 
     # Set validity of pre-signed POST requests (in seconds)
     AWS_SIGNED_REQUEST_EXPIRATION = 60
 
     # AWS S3 upload parameters
-    AWS_S3_INPUTS_BUCKET = "gas-inputs"
-    AWS_S3_RESULTS_BUCKET = "gas-results"
+    AWS_S3_INPUTS_BUCKET = "YOUR_BUCKET_ID"
+    AWS_S3_RESULTS_BUCKET = "YOUR_BUCKET_ID"
     # Set the S3 key (object name) prefix to your CNetID
     # Keep the trailing '/' if using my upload code in views.py
     AWS_S3_KEY_PREFIX = f"{iam_username}/"
     AWS_S3_ACL = "private"
     AWS_S3_ENCRYPTION = "AES256"
 
-    AWS_GLACIER_VAULT = "ucmpcs"
+    AWS_GLACIER_VAULT = "YOUR_VAULT_ID"
 
     # AWS SNS topics
     AWS_SNS_JOB_REQUEST_TOPIC = (
-        f"arn:aws:sns:us-east-1:127134666975:{iam_username}_a17_job_requests"
+        f"arn:aws:sns:us-east-1:127134666975:{iam_username}_job_requests"
     )
 
     AWS_SNS_THAW_REQUEST_TOPIC = (
-        f"arn:aws:sns:us-east-1:127134666975:{iam_username}_a17_thaw_requests"
+        f"arn:aws:sns:us-east-1:127134666975:{iam_username}_thaw_requests"
     )
 
     # AWS SQS queues
-    AWS_SQS_REQUESTS_QUEUE_NAME = f"{iam_username}_a17_job_requests"
+    AWS_SQS_REQUESTS_QUEUE_NAME = f"{iam_username}_job_requests"
 
-    AWS_SQS_THAW_REQUESTS_QUEUE_NAME = f"{iam_username}_a17_thaw_requests"
+    AWS_SQS_THAW_REQUESTS_QUEUE_NAME = f"{iam_username}_thaw_requests"
 
     # AWS DynamoDB table
     AWS_DYNAMODB_ANNOTATIONS_TABLE = f"{iam_username}_annotations"
