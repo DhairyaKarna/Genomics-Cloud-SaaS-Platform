@@ -12,8 +12,8 @@ import json
 from botocore.exceptions import ClientError
 
 # Define constants here; no config file is used for Lambdas
-DYNAMODB_TABLE = "dhairyakarna_annotations"
-GLACIER_VAULT_NAME = "ucmpcs"
+DYNAMODB_TABLE = "YOUR_TABLE_ID"
+GLACIER_VAULT_NAME = "YOUR_VAULT_ID"
 AWS_REGION_NAME = "us-east-1"
 
 
