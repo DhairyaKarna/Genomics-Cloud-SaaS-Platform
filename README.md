@@ -1,6 +1,6 @@
 # Genomics Cloud SaaS Platform
 
-Developed a sophisticated cloud-based workflow for processing genomic data, utilizing AWS services such as S3, DynamoDB, Glacier, Lambda, SNS, and SQS, along with Stripe integration for user subscription management.
+Developed a sophisticated cloud-based workflow for processing genomic data and annotate them, utilizing AWS services such as S3, DynamoDB, Glacier, Lambda, SNS, and SQS, along with Stripe integration for user subscription management.
 
 ## Features
 
