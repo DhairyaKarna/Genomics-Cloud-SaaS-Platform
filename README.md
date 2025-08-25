@@ -15,6 +15,8 @@ Developed a sophisticated cloud-based workflow for processing genomic data and a
 3. **Data Retrieval:** Uses Glacier for data archiving and retrieval.
 4. **Lambda Processing:** Manages data restoration and updates DynamoDB.
 
+<img width="993" height="798" alt="Cloud Diagram" src="https://github.com/user-attachments/assets/32fca04a-5a51-44f5-a48c-6e046cff891b" />
+
 ## Technical Details
 
 - **AWS Services:** S3, DynamoDB, Glacier, Lambda, SNS, SQS.
